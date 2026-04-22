@@ -17,9 +17,9 @@ A locally-hosted question-answering chatbot grounded in the Bible. Ask any quest
 
 | | |
 |---|---|
-| ![Faith](docs/screenshots/01_faith.png) | ![Prodigal Son](docs/screenshots/02_prodigal.png) |
+| ![Faith](docs/screenshots/01_faith_answer.png) | ![Prodigal Son](docs/screenshots/02_prodigal_answer.png) |
 | *"What does the Bible say about faith?"* | *"Explain the parable of the prodigal son."* |
-| ![David and Goliath](docs/screenshots/03_david_goliath.png) | ![John 3:16](docs/screenshots/04_john316.png) |
+| ![David and Goliath](docs/screenshots/03_david_goliath_answer.png) | ![John 3:16](docs/screenshots/04_john316_answer.png) |
 | *"How did David defeat Goliath?"* | *"What is the meaning of John 3:16?"* |
 
 ## Stack
