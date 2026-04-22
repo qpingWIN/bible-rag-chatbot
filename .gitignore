@@ -1,0 +1,19 @@
+# Data (large files, not committed)
+data/raw/
+data/index/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Misc
+take_screenshots.py
+raw/
