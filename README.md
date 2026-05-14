@@ -1,6 +1,6 @@
 # Bible RAG Chatbot
 
-A locally-hosted question-answering chatbot grounded in the Bible. Ask any question and receive cited answers drawn from two Bible translations and Matthew Henry's 18th-century commentary — no API keys, no internet connection required after setup.
+A locally-hosted question-answering chatbot grounded in the Bible. Ask any question and receive cited answers drawn from two Bible translations and Matthew Henry's 18th-century commentary: no API keys, no internet connection required after setup.
 
 ![Landing page](docs/screenshots/00_landing.png)
 
