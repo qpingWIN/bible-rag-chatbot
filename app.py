@@ -7,14 +7,12 @@ Then open http://localhost:7860 in your browser.
 
 THE FULL RAG LOOP (what happens when you submit a question)
 -----------------------------------------------------------
-1. Your question is embedded → a 384-dim vector encoding its meaning.
+1. Your question is embedded into a 384-dim vector encoding its meaning.
 2. FAISS performs nearest-neighbour search: finds the top-K chunks whose
    embedding vectors are closest (highest cosine similarity) to yours.
-3. [Optional] Cross-reference expansion: if matched verses have theological
-   links, add those too.
+3. [Optional]Cross-reference expansion: if matched verses have theological links, we add those too.
 4. The retrieved chunks are injected into the system prompt as context.
-5. Ollama (local llama3.2) reads the context + your question → generates
-   a grounded answer that cites sources.
+5. Ollama (local llama3.2) reads the context + your question and generates a grounded answer that cites sources.
 
 Nothing here calls the internet. Everything runs on your machine.
 """
@@ -38,8 +36,7 @@ from src.generator import generate, list_available_models
 
 import numpy as np
 
-# ── Startup checks ─────────────────────────────────────────────────────────────
-
+# Starting checks
 if not index_exists():
     print("ERROR: Index not found. Run `python build_index.py` first.")
     sys.exit(1)
@@ -60,7 +57,7 @@ except Exception as e:
     print(f"WARNING: Could not connect to Ollama: {e}")
     print("Make sure Ollama is running: ollama serve")
 
-# ── Core query function ────────────────────────────────────────────────────────
+# Core query function
 
 def answer_question(
     query: str,
@@ -103,7 +100,7 @@ def answer_question(
             results, index, chunks_meta, xrefs, ref_to_chunk, max_extra=3
         )
 
-    # 6. Generate answer (streams to stdout, returns full string)
+    # 6. Generate answer
     answer = generate(query, results, stream=False)
 
     # 7. Build sources panel
@@ -119,13 +116,13 @@ def answer_question(
     return answer, sources_panel
 
 
-# ── Gradio UI ─────────────────────────────────────────────────────────────────
+# Gradio UI
 
-with gr.Blocks(title="Bible RAG", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Bible RAG") as demo:
     gr.Markdown("""
     # Bible RAG Chatbot
     Ask any question about the Bible. Answers are grounded in KJV, BSB, and
-    Matthew Henry's Complete Commentary — running 100% locally via Ollama.
+    Matthew Henry's Complete Commentary - running 100% locally via Ollama.
     """)
 
     with gr.Row():
@@ -187,4 +184,4 @@ with gr.Blocks(title="Bible RAG", theme=gr.themes.Soft()) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(server_port=7860, share=False)
+    demo.launch(server_port=7862, share=False, theme=gr.themes.Soft())

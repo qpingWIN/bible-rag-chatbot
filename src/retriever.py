@@ -1,4 +1,4 @@
-"""FAISS vector store: build, persist, and query the similarity index."""
+"""FAISS vector store: build, persist, and query the similarity index"""
 
 import json
 import numpy as np
@@ -10,7 +10,7 @@ INDEX_DIR = Path(__file__).parent.parent / "data" / "index"
 
 
 def build_index(chunks: list[Chunk], embeddings: np.ndarray) -> faiss.IndexFlatIP:
-    """Build a FAISS flat inner-product index from pre-computed embeddings."""
+    """Build a FAISS flat inner-product index from pre-computed embeddings"""
     dim = embeddings.shape[1]
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
@@ -43,7 +43,7 @@ def search(
     index: faiss.IndexFlatIP,
     chunks_meta: list[dict],
     query_embedding: np.ndarray,
-    top_k: int = 6,
+    top_k: int = 3,
 ) -> list[dict]:
     """
     Return top_k most similar chunks, deduplicated by verse reference.
@@ -56,6 +56,7 @@ def search(
     scores, indices = index.search(query_embedding, fetch_k)
 
     seen_keys: set[str] = set()
+    seen_scores: set[float] = set()
     results: list[dict] = []
 
     for score, idx in zip(scores[0], indices[0]):
@@ -69,9 +70,10 @@ def search(
         else:
             key = chunk["reference"]
 
-        if key in seen_keys:
+        if key in seen_keys or chunk["score"] in seen_scores:
             continue
         seen_keys.add(key)
+        seen_scores.add(chunk["score"])
         results.append(chunk)
 
         if len(results) == top_k:
@@ -88,7 +90,7 @@ def expand_with_cross_references(
     ref_to_chunk: dict[str, int],
     max_extra: int = 3,
 ) -> list[dict]:
-    """Augment results with cross-referenced verses."""
+    """Augment results with cross-referenced verses"""
     seen_refs = {r["reference"] for r in results}
     extra: list[dict] = []
 
@@ -118,7 +120,7 @@ def expand_with_cross_references(
 
 
 def build_ref_to_chunk_index(chunks_meta: list[dict]) -> dict[str, int]:
-    """Map 'Book.Chapter.Verse' → index in chunks_meta for fast xref lookup."""
+    """Map 'Book.Chapter.Verse' → index in chunks_meta for fast xref lookup"""
     ref_map: dict[str, int] = {}
     for i, chunk in enumerate(chunks_meta):
         if chunk.get("verse") is not None:
