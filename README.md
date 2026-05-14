@@ -6,9 +6,9 @@ A locally-hosted retrieval-augmented question-answering system over a 367k-passa
 
 | | |
 |---|---|
-| ![Faith](docs/screenshots/01_faith_answer.png) | ![Prodigal Son](docs/screenshots/02_prodigal_answer.png) |
-| *"What does the Bible say about faith?"* | *"Explain the parable of the prodigal son."* |
-| ![David and Goliath](docs/screenshots/03_david_goliath_answer.png) | ![Out of scope](docs/screenshots/04_out_of_scope_answer.png) |
+| ![Landing](docs/screenshots/00_landing.png) | ![Faith](docs/screenshots/01_faith_answer.png) |
+| *Landing page* | *"What does the Bible say about faith?"* |
+| ![David and Goliath](docs/screenshots/02_david_goliath_answer.png) | ![Out of scope](docs/screenshots/03_out_of_scope_answer.png) |
 | *"How did David defeat Goliath?"* | *"Will Jesus return to Earth in 2026?"* |
 
 ## Stack
