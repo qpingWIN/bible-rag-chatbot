@@ -14,6 +14,3 @@ build/
 # macOS
 .DS_Store
 
-# Misc
-take_screenshots.py
-raw/

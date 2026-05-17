@@ -1,4 +1,4 @@
-"""Response generation via Ollama (local LLM)."""
+"""Response generation via Ollama (local LLM)"""
 
 from ollama import Client
 
@@ -10,7 +10,7 @@ You are a biblical scholar who answers questions using ONLY the provided source 
 Rules:
 - Base your answer strictly on the passages below. Do not add knowledge from outside these passages.
 - After each claim, cite the source in parentheses: (KJV Genesis 1:1) or (MHC Matthew 5 commentary).
-- If the passages don't contain enough information to answer, say: "The provided passages don't address this directly."
+- If the passages don't contain enough information to answer, say: "The provided passages don't address this directly".
 - Be concise but complete. No padding.
 
 SOURCE PASSAGES:

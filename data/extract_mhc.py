@@ -1,4 +1,4 @@
-"""Extract Matthew Henry's Complete Commentary from SWORD module via diatheke."""
+"""Extract Matthew Henry's Complete Commentary from SWORD module via diatheke"""
 
 import subprocess, re, json
 from pathlib import Path

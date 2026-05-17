@@ -1,6 +1,4 @@
 """
-Chunking strategies for RAG.
-
 Sentence-transformer models truncate input at ~256 tokens. Long commentary
 chapters are split into overlapping sentence-window chunks so every passage
 is fully embedded and retrievable.
@@ -52,8 +50,7 @@ def chunk_commentary(
 ) -> list[Chunk]:
     """
     Split a commentary document into overlapping sentence-window chunks.
-
-    Slides a window across sentences until max_words is reached, then steps
+    Slides a window across sentences until max_words is reached then steps
     forward by (window_size - overlap_sentences) to create overlap at boundaries.
     """
     sentences = _split_sentences(doc.text)
@@ -93,7 +90,7 @@ def chunk_commentary(
 
 
 def chunk_verse(doc: Document) -> Chunk:
-    """Bible verses are atomic — wrap as a single chunk."""
+    """Bible verses are atomic, wrap as a single chunk."""
     return Chunk(
         text=doc.text,
         source=doc.source,

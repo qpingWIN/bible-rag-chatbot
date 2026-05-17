@@ -1,4 +1,4 @@
-"""Load and normalise all data sources into a unified document format."""
+"""Load and normalise all data sources into a unified document format"""
 
 import json, csv
 from pathlib import Path
@@ -56,7 +56,7 @@ def load_bsb() -> list[Document]:
 
 
 def load_commentary() -> list[Document]:
-    """Load Matthew Henry chapter-level commentary. Chunking happens in chunker.py."""
+    """Load Matthew Henry chapter-level commentary. Chunking happens in chunker.py"""
     data = json.loads((RAW / "mhc_commentary.json").read_text())
     docs = []
     for book in data:
@@ -75,8 +75,8 @@ def load_commentary() -> list[Document]:
 
 def load_cross_references() -> dict[str, list[str]]:
     """
-    Returns a dict mapping verse reference → list of related verse references.
-    E.g. {"Gen.1.1": ["Ps.96.5", "Isa.40.28", ...], ...}
+    Returns a dict mapping verse reference → list of related verse references
+    Eg {"Gen.1.1": ["Ps.96.5", "Isa.40.28", ...], ...}
     """
     xrefs: dict[str, list[str]] = {}
     with open(RAW / "cross_references.txt") as f:
@@ -91,7 +91,7 @@ def load_cross_references() -> dict[str, list[str]]:
 
 
 def load_all() -> tuple[list[Document], list[Document], list[Document], dict]:
-    """Return (kjv_docs, bsb_docs, commentary_docs, cross_references)."""
+    """Return (kjv_docs, bsb_docs, commentary_docs, cross_references)"""
     print("Loading KJV...")
     kjv = load_kjv()
     print(f"  {len(kjv):,} verses")

@@ -1,18 +1,16 @@
 """
-One-time script: load all data → chunk → embed → save FAISS index.
+One-time script: loading all data, then chunking, followed by embedding and saving FAISS index.
 
-Run this before using the chatbot:
-  python build_index.py
+Run this before using the chatbot: python build_index.py
 
-Takes ~2-5 minutes on first run (downloads embedding model, processes 31k+ chunks).
+Takes ~2-5 minutes on first run (downloads embedding model, processes ~65k chunks).
 Subsequent runs load from cache in <5 seconds.
 
 WHAT THIS SCRIPT DOES (step by step)
 --------------------------------------
-1. Load raw data: KJV verses, BSB verses, MHC commentary → Document objects
-2. Chunk: bible verses are already atomic (one chunk each); MHC commentary is
-   split into overlapping 250-word windows (see src/chunker.py)
-3. Embed: run every chunk through all-MiniLM-L6-v2 → float32 matrix (N, 384)
+1. Load raw data: KJV verses, BSB verses, MHC commentary into Document objects
+2. Chunk: bible verses are already atomic (1 verse = 1 chunk). MHC commentary is split into overlapping 250-word windows (see src/chunker.py)
+3. Embed: run every chunk through all-MiniLM-L6-v2 to get the float32 matrix (N, 384)
 4. Build FAISS index: store the matrix in an IndexFlatIP for fast dot-product search
 5. Save: write index + chunk metadata to data/index/ so the app loads instantly
 """
@@ -35,20 +33,20 @@ def main():
         print("  rm -rf data/index/")
         return
 
-    # ── Step 1: Load ─────────────────────────────────────────────────────────
+    # Loading
     kjv_docs, bsb_docs, mhc_docs, xrefs = load_all()
 
-    # ── Step 2: Chunk ─────────────────────────────────────────────────────────
+    # Chunking
     chunks = build_all_chunks(kjv_docs, bsb_docs, mhc_docs)
 
-    # ── Step 3: Embed ─────────────────────────────────────────────────────────
+    # Embedding
     model = load_model()
     texts = [c.text for c in chunks]
     print(f"\nEmbedding {len(texts):,} chunks (this takes a few minutes)...")
     embeddings = embed_texts(model, texts)
-    print(f"Embeddings shape: {embeddings.shape}")   # e.g. (65000, 384)
+    print(f"Embeddings shape: {embeddings.shape}") 
 
-    # ── Step 4 & 5: Build + Save ──────────────────────────────────────────────
+    # Building and saving the FAISS index
     index = build_index(chunks, embeddings)
     save_index(index, chunks)
 
