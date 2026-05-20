@@ -89,32 +89,45 @@ def expand_with_cross_references(
     xrefs: dict[str, list[str]],
     ref_to_chunk: dict[str, int],
     max_extra: int = 3,
+    max_per_seed: int = 1,
 ) -> list[dict]:
-    """Augment results with cross-referenced verses"""
+    """Augment results with cross-referenced verses.
+
+    Each seed contributes at most `max_per_seed` xrefs, total xref additions
+    are capped at `max_extra` across all seeds.
+    """
     seen_refs = {r["reference"] for r in results}
     extra: list[dict] = []
 
     for result in results:
+        if len(extra) >= max_extra:
+            break
         if result.get("verse") is None:
             continue
+
         ref_key = "{}.{}.{}".format(
             result["book"], result["chapter"], result["verse"]
         )
+        added_from_this_seed = 0
+
         for xref in xrefs.get(ref_key, [])[:5]:
+            if added_from_this_seed >= max_per_seed:
+                break
+            if len(extra) >= max_extra:
+                break
+
             chunk_idx = ref_to_chunk.get(xref)
             if chunk_idx is None:
                 continue
             chunk = dict(chunks_meta[chunk_idx])
             if chunk["reference"] in seen_refs:
                 continue
+
             chunk["score"] = 0.0
             chunk["xref_from"] = result["reference"]
             extra.append(chunk)
             seen_refs.add(chunk["reference"])
-            if len(extra) >= max_extra:
-                break
-        if len(extra) >= max_extra:
-            break
+            added_from_this_seed += 1
 
     return results + extra
 
