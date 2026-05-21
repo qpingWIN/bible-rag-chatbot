@@ -19,7 +19,7 @@ def mhc_chunk(book="Lev", chapter=25, chunk_index=0):
 
 # verse_match tests
 class TestVerseMatch:
-    """verse_match: translation-agnostic verse gold."""
+    """verse_match: translation-agnostic verse gold"""
 
     def test_kjv_chunk_matches(self):
         assert verse_match("Mark.5.6", kjv_chunk())

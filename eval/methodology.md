@@ -30,7 +30,7 @@ Candidates were sourced as follows and verified against an authoritative source 
 
 Each question's `source` field records its specific construction path. LLM-assisted candidate generation is disclosed wherever used, LLM was never used to write or approve gold labels.
 
-Thematic questions are deliberately designed as discriminators between *clustering* and *diversifying* retrievers: gold sets span multiple canonical locations (e.g. q16 anxiety spans Phil 4 / Matt 6 / 1 Pet 5 / wisdom / prophets), so a retriever clustering on one famous anchor passes only superficially.
+Thematic questions are deliberately designed as discriminators between clustering and diversifying retrievers: gold sets span multiple canonical locations (e.g. q16 anxiety spans Phil 4 / Matt 6 / 1 Pet 5 / wisdom / prophets), so a retriever clustering on one famous anchor passes only superficially.
 
 Interpretive questions are constructed so verse-only retrieval returns a coherent but interpretively-incomplete answer. The MHC chunk supplies the theological or other valuable interpretation (e.g. Jacob's ladder as Christ-mediator in q20, bronze serpent as cross-typology in q23). These questions are designed to fail without the commentary index.
 
@@ -42,15 +42,18 @@ The corpus stores each chunk with a `(source, book, chapter, verse, chunk_index)
 
 **MHC gold** is recorded at chapter scope (e.g. `MHC.Lev.25`) and matches any retrieved chunk where `source = "mhc"` and `(book, chapter)` agrees. This is a deliberate design choice rather than a labelling shortcut. MHC chunks are produced by a sliding sentence-window chunker (target ~250 words, 1-sentence overlap) operating on a per-chapter commentary, chunks carry a positional `chunk_index` but no verse-range metadata, since verse anchors are stripped during MHC extraction. Chunk-index gold would therefore mean "the Nth chunk of MHC's Lev 25 commentary under the current chunker settings", which would become invalid as soon as chunking parameters change, and chunking is itself a planned ablation axis. Chapter-scope gold is the only definition that survives changes to the chunker.
 
+For interpretive questions, a faithfulness_rubric field records the specific interpretive content MHC supplies. This is the gold against which generated answers are scored by LLM-as-judge (see Metrics). Rubrics were drafted with LLM assistance and verified against MHC's commentary on Bible Hub.
+
 The known weakness of this approach is that a retriever can return a chunk on the wrong portion of MHC's chapter commentary and still pass the retrieval check. It is addressed at a different layer rather than at the gold-label layer. See Metrics.
 
 ## Thresholds and aggregation
 
 Each question has a `min_recall` value: the minimum count of gold items the retriever must surface in the top-k for the question to be marked a pass.
 
-- **Factual, named entity, interpretive** — `min_recall = 1`. The retriever either finds a relevant item or doesn't.
+- **Factual, named entity** — `min_recall = 1`. The retriever either finds a relevant item or doesn't.
+- **Interpretive** - `min_recall = 1` against MHC chunks specifically. Verse hits are not counted toward the threshold for this category since the category's purpose is testing whether the commentary index is surfaced. Finding only the verses should not count as a pass. Verse hits are still tracked in diagnostic output.
 - **Narrative** — `min_recall` scales with gold span size, targeting roughly 50–60% recall. Narrative passes require enough span coverage for a downstream LLM to reconstruct the story.
-- **Thematic** — `min_recall = 2–4` regardless of gold size, targeting roughly 30–40% recall. The threshold encodes "found N distinct thematic anchors," not "achieved high recall of the full gold set". This matches the category's purpose which is testing diversity rather than completeness.
+- **Thematic** — `min_recall = 2–4` regardless of gold size, targeting roughly 30–40% recall. The threshold encodes "found N distinct thematic anchors" not "achieved high recall of the full gold set". This matches the category's purpose which is testing diversity rather than completeness.
 
 One exception within named entity: q39 (Judas) uses `min_recall = 2` to test whether the retriever returns diverse gospel accounts of the betrayal rather than near-duplicate verses from a single passage.
 
@@ -78,7 +81,7 @@ Three classes of metric, reported at category level:
 2. **Continuous retrieval metrics** — Recall@k and MRR to capture coverage and rank quality below the pass/fail threshold.
 3. **Faithfulness** (interpretive, possibly thematic) — LLM-as-judge scoring of the generated answer against retrieved context, to catch cases where retrieval surfaced the right chunk but the answer doesn't reflect MHC's specific reading.
 
-For the interpretive category specifically, retrieval pass-rate and faithfulness play distinct diagnostic roles. Retrieval pass-rate (chapter-scope) confirms the right MHC chapter surfaced. Faithfulness confirms the specific interpretive content within that chapter was returned in usable form. A configuration that passes retrieval but fails faithfulness on interpretive questions has found the right chapter but surfaced the wrong sub-chunk of it is diagnostically more informative than a single combined score.
+For the interpretive category, retrieval pass-rate is computed against MHC hits only (per the threshold rule above). A passing result means at least one MHC chunk from the correct chapter was returned, not that the specific load-bearing chunk was returned, since chapter-scope gold accepts any chunk in the chapter's commentary. Faithfulness then asks whether the answer reflects MHC's specific reading. A config that passes retrieval but fails faithfulness has surfaced a chunk from the right chapter but evidently not the right one within it.
 
 All metrics are reported with 95% bootstrap confidence intervals using **1,000 percentile-method resamples** with replacement. Resampling is applied to questions (not chunks or retrieval results) and is performed **within each category** when computing category-level CIs, since per-category n is the operative sample size for those numbers. With this sample size, point-estimate gaps between configurations are frequently within CI overlap, CIs are reported precisely to prevent over-interpretation of small differences in the ablation table. Per-question disagreement tables between configurations supplement aggregate metrics, since error analysis is often more diagnostic than mean differences.
 
