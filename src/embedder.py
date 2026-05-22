@@ -29,7 +29,7 @@ def embed_texts(
     batch_size: int = 512,
     show_progress: bool = True,
 ) -> np.ndarray:
-    """Return L2-normalised float32 embeddings, shape (N, dim)."""
+    """Return L2-normalised float32 embeddings, shape (N, dim)"""
     embeddings = model.encode(
         texts,
         batch_size=batch_size,

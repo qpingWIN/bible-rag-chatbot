@@ -70,10 +70,9 @@ def search(
         else:
             key = chunk["reference"]
 
-        if key in seen_keys or chunk["score"] in seen_scores:
+        if key in seen_keys:
             continue
         seen_keys.add(key)
-        seen_scores.add(chunk["score"])
         results.append(chunk)
 
         if len(results) == top_k:
