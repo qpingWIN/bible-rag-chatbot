@@ -39,7 +39,18 @@ def clean_osis(text: str) -> str:
     return text
 
 
-def fetch_chapter(book_abbr: str, chapter: int) -> dict:
+def fetch_chapter(book_abbr: str, chapter: int) -> str:
+    """Fetch MHC commentary for a chapter.
+
+    Diatheke's MHC module returns commentary structured by sections within
+    a chapter. Each section's commentary is repeated once per verse in the
+    section's range, distinguished only by the verse prefix. We deduplicate
+    by content: each unique commentary block contributes once.
+
+    Example: 2 Kings 5 has 4 sections (vv.1-8, 9-14, 15-19, 20-27), so
+    diatheke returns 27 lines (8+6+5+8) plus a (MHC) footer. After
+    deduplication we keep 4 unique commentary blocks and concatenate them.
+    """
     key = f"{book_abbr} {chapter}"
     result = subprocess.run(
         ["diatheke", "-b", "MHC", "-k", key],
@@ -47,17 +58,18 @@ def fetch_chapter(book_abbr: str, chapter: int) -> dict:
     )
     raw = result.stdout
 
-    # Collect all verse lines then merge into chapter commentary
-    lines = raw.strip().splitlines()
-    texts = []
-    for line in lines:
+    seen: set[str] = set()
+    blocks: list[str] = []
+    for line in raw.strip().splitlines():
         line = VERSE_RE.sub("", line).strip()
-        if line and line != "(MHC)":
-            cleaned = clean_osis(line)
-            if cleaned:
-                texts.append(cleaned)
+        if not line or line == "(MHC)":
+            continue
+        cleaned = clean_osis(line)
+        if cleaned and cleaned not in seen:
+            seen.add(cleaned)
+            blocks.append(cleaned)
 
-    return " ".join(texts)
+    return " ".join(blocks)
 
 
 def main():
@@ -66,7 +78,7 @@ def main():
     done = 0
 
     for abbr, name, num_chapters in BOOKS:
-        book_data = {"book": name, "chapters": []}
+        book_data = {"book": abbr, "chapters": []}
         for ch in range(1, num_chapters + 1):
             text = fetch_chapter(abbr, ch)
             if text:

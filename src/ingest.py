@@ -32,7 +32,7 @@ def load_kjv() -> list[Document]:
                 docs.append(Document(
                     text=v["text"].strip(),
                     source="kjv",
-                    book=book["name"],
+                    book=_normalise_book(book["name"]),
                     chapter=chapter["chapter"],
                     verse=v["verse"],
                 ))
@@ -48,7 +48,7 @@ def load_bsb() -> list[Document]:
                 docs.append(Document(
                     text=v["text"].strip(),
                     source="bsb",
-                    book=book["name"],
+                    book=_normalise_book(book["name"]),
                     chapter=chapter["chapter"],
                     verse=v["verse"],
                 ))
@@ -109,3 +109,47 @@ def load_all() -> tuple[list[Document], list[Document], list[Document], dict]:
     print(f"  {len(xrefs):,} verse cross-reference entries")
 
     return kjv, bsb, mhc, xrefs
+
+
+# Maps source JSON book names to OSIS abbreviations.
+# KJV and BSB use Roman numeral prefixes (I, II, III) and
+# 'Revelation of John' must be mapped explicitly.
+BOOK_NAME_TO_ABBR = {
+    "Genesis": "Gen", "Exodus": "Exod", "Leviticus": "Lev",
+    "Numbers": "Num", "Deuteronomy": "Deut", "Joshua": "Josh",
+    "Judges": "Judg", "Ruth": "Ruth",
+    "I Samuel": "1Sam", "II Samuel": "2Sam",
+    "I Kings": "1Kgs", "II Kings": "2Kgs",
+    "I Chronicles": "1Chr", "II Chronicles": "2Chr",
+    "Ezra": "Ezra", "Nehemiah": "Neh", "Esther": "Esth",
+    "Job": "Job", "Psalms": "Ps", "Proverbs": "Prov",
+    "Ecclesiastes": "Eccl", "Song of Solomon": "Song",
+    "Isaiah": "Isa", "Jeremiah": "Jer", "Lamentations": "Lam",
+    "Ezekiel": "Ezek", "Daniel": "Dan", "Hosea": "Hos",
+    "Joel": "Joel", "Amos": "Amos", "Obadiah": "Obad",
+    "Jonah": "Jonah", "Micah": "Mic", "Nahum": "Nah",
+    "Habakkuk": "Hab", "Zephaniah": "Zeph", "Haggai": "Hag",
+    "Zechariah": "Zech", "Malachi": "Mal",
+    "Matthew": "Matt", "Mark": "Mark", "Luke": "Luke",
+    "John": "John", "Acts": "Acts", "Romans": "Rom",
+    "I Corinthians": "1Cor", "II Corinthians": "2Cor",
+    "Galatians": "Gal", "Ephesians": "Eph", "Philippians": "Phil",
+    "Colossians": "Col",
+    "I Thessalonians": "1Thess", "II Thessalonians": "2Thess",
+    "I Timothy": "1Tim", "II Timothy": "2Tim",
+    "Titus": "Titus", "Philemon": "Phlm", "Hebrews": "Heb",
+    "James": "Jas",
+    "I Peter": "1Pet", "II Peter": "2Pet",
+    "I John": "1John", "II John": "2John", "III John": "3John",
+    "Jude": "Jude", "Revelation of John": "Rev",
+}
+
+
+def _normalise_book(name: str) -> str:
+    """Maps source book name to OSIS abbreviation
+    
+    Raises ValueError if the name is unrecognised 
+    """
+    if name not in BOOK_NAME_TO_ABBR:
+        raise ValueError(f"Unrecognised book name: {name!r}. Add to BOOK_NAME_TO_ABBR.")
+    return BOOK_NAME_TO_ABBR[name]

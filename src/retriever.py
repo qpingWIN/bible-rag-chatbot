@@ -56,7 +56,6 @@ def search(
     scores, indices = index.search(query_embedding, fetch_k)
 
     seen_keys: set[str] = set()
-    seen_scores: set[float] = set()
     results: list[dict] = []
 
     for score, idx in zip(scores[0], indices[0]):
