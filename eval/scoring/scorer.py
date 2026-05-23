@@ -12,6 +12,13 @@ def score_question(question:dict, retrieved: list[dict]) -> dict:
       - mhc_hits: gold MHC chunks found
       - total_gold: len(gold_verses) + len(gold_commentary_chunks)
       - missed_gold: gold labels not found in retrieved
+      - recall_at_k: proportion of gold items retrieved in top-k
+      (hits / total_gold)
+      - reciprocal_rank: reciprocal of the first relevant hit rank
+      (1 / first_hit_rank, or 0 if no gold retrieved)
+      - first_hit_rank: rank of the first retrieved gold match
+      across verses or MHC chunks (None if no hit)
+
 
     Translation dedup is implicit since we iterate over gold (not the retrieved), 
     thus the same gold verse can only be counted once.
