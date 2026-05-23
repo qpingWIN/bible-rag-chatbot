@@ -4,7 +4,7 @@ import pytest
 
 from eval.scoring.scorer import score_question
 
-#Chunk fixtures (from test_matchin.py)
+#Chunk fixtures (from test_matching.py)
 def kjv_chunk(book="Mark", chapter=5, verse=6):
     return {"source": "kjv", "book": book, "chapter": chapter, "verse": verse, "chunk_index": 0}
 
@@ -239,3 +239,102 @@ class TestEmptyCases:
         assert not result["passed"]
         assert result["hits"] == 0
         assert result["mhc_hits"] == 0
+
+class TestCtsMetrics:
+    """Recall@k and MRR computed alongside pass/fail"""
+
+    def test_recall_full_when_all_gold_found(self):
+        q = make_question(
+            gold_verses=["Gen.1.1", "Gen.1.2"],
+            min_recall=1,
+        )
+        retrieved = [
+            kjv_chunk(book="Gen", chapter=1, verse=1),
+            kjv_chunk(book="Gen", chapter=1, verse=2),
+        ]
+        result = score_question(q, retrieved)
+        assert result["recall_at_k"] == 1.0
+
+    def test_recall_partial(self):
+        q = make_question(
+            gold_verses=["Gen.1.1", "Gen.1.2", "Gen.1.3"],
+            min_recall=1,
+        )
+        retrieved = [kjv_chunk(book="Gen", chapter=1, verse=1)]
+        result = score_question(q, retrieved)
+        assert result["recall_at_k"] == 1/3
+
+    def test_recall_zero_when_nothing_matches(self):
+        q = make_question(gold_verses=["Gen.1.1"], min_recall=1)
+        retrieved = [kjv_chunk(book="Mark", chapter=5, verse=6)]
+        result = score_question(q, retrieved)
+        assert result["recall_at_k"] == 0.0
+
+    def test_recall_translation_dedup(self):
+        # Two translations of the same gold verse should give recall=1.0, not 2.0
+        q = make_question(gold_verses=["Gen.1.1"], min_recall=1)
+        retrieved = [
+            kjv_chunk(book="Gen", chapter=1, verse=1),
+            bsb_chunk(book="Gen", chapter=1, verse=1),
+        ]
+        result = score_question(q, retrieved)
+        assert result["recall_at_k"] == 1.0
+
+    def test_mrr_gold_at_rank_one(self):
+        q = make_question(gold_verses=["Gen.1.1"], min_recall=1)
+        retrieved = [kjv_chunk(book="Gen", chapter=1, verse=1)]
+        result = score_question(q, retrieved)
+        assert result["first_hit_rank"] == 1
+        assert result["reciprocal_rank"] == 1.0
+
+    def test_mrr_gold_at_rank_three(self):
+        q = make_question(gold_verses=["Gen.1.5"], min_recall=1)
+        retrieved = [
+            kjv_chunk(book="Mark", chapter=5, verse=6),
+            kjv_chunk(book="John", chapter=1, verse=1),
+            kjv_chunk(book="Gen", chapter=1, verse=5),
+        ]
+        result = score_question(q, retrieved)
+        assert result["first_hit_rank"] == 3
+        assert result["reciprocal_rank"] == 1/3
+
+    def test_mrr_zero_when_no_gold_retrieved(self):
+        q = make_question(gold_verses=["Gen.1.1"], min_recall=1)
+        retrieved = [kjv_chunk(book="Mark", chapter=5, verse=6)]
+        result = score_question(q, retrieved)
+        assert result["first_hit_rank"] is None
+        assert result["reciprocal_rank"] == 0.0
+
+    def test_mrr_takes_earliest_of_multiple_gold(self):
+        # Gold A and B in the set. A appears at rank 2, B at rank 4
+        # MRR should use rank 2 (the earliest gold hit)
+        q = make_question(
+            gold_verses=["Gen.1.1", "Gen.1.2"],
+            min_recall=1,
+        )
+        retrieved = [
+            kjv_chunk(book="Mark", chapter=5, verse=6),
+            kjv_chunk(book="Gen", chapter=1, verse=2),    #rank 2
+            kjv_chunk(book="John", chapter=1, verse=1),
+            kjv_chunk(book="Gen", chapter=1, verse=1),
+        ]
+        result = score_question(q, retrieved)
+        assert result["first_hit_rank"] == 2
+        assert result["reciprocal_rank"] == 0.5
+
+    def test_mrr_uses_mhc_for_interpretive_too(self):
+        # Interpretive scoring: 'passed' uses mhc_hits only, but MRR uses any gold (verse or MHC).
+        # An MHC chunk at rank 1 should give reciprocal_rank=1.0
+        q = make_question(
+            category="interpretive",
+            gold_verses=["Lev.25.23"],
+            gold_commentary_chunks=["MHC.Lev.25"],
+            min_recall=1,
+        )
+        retrieved = [
+            mhc_chunk(book="Lev", chapter=25),
+            kjv_chunk(book="Lev", chapter=25, verse=23),
+        ]
+        result = score_question(q, retrieved)
+        assert result["first_hit_rank"] == 1
+        assert result["reciprocal_rank"] == 1.0
