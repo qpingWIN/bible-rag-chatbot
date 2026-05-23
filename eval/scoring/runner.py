@@ -89,31 +89,42 @@ def run_eval(config:dict) -> list[dict]:
         print(f"  [{i:02d}/{len(questions)}] {q['id']} ({q['category']}) → {status}  hits={score['hits']}/{score['total_gold']}")
     return results
 
-def summarise (results: list[dict]) -> dict:
+def summarise(results: list[dict]) -> dict:
     """Summarise results by category and overall"""
 
     from collections import defaultdict
-    cats: dict[str, dict] = defaultdict(lambda: {"passed": 0, "total": 0})
+    cats: dict[str, dict] = defaultdict(lambda: {"passed": 0, "total": 0,
+                                        "recall_at_k_sum": 0.0,
+                                        "reciprocal_rank_sum": 0.0})
 
     for r in results:
         cat = r["category"]
         cats[cat]["total"] += 1
         if r["passed"]:
             cats[cat]["passed"] += 1
+        cats[cat]["recall_at_k_sum"] += r["recall_at_k"]
+        cats[cat]["reciprocal_rank_sum"] += r["reciprocal_rank"]
     summary = {}
 
     for cat, counts in sorted(cats.items()):
         rate = counts["passed"]/counts["total"]
+        n = counts["total"]
         summary[cat] = {
             "passed": counts["passed"],
-            "total": counts["total"],
+            "total": n,
             "pass_rate": round(rate,3),
+            "mean_recall_at_k": round(counts["recall_at_k_sum"] / n, 3),
+            "mean_mrr": round(counts["reciprocal_rank_sum"] / n, 3),
         }
     overall_passed = sum(r["passed"] for r in results)
+    overall_recall = sum(r["recall_at_k"] for r in results) / len(results)
+    overall_mrr = sum(r["reciprocal_rank"] for r in results) / len(results)
     summary["overall"] = {
         "passed": overall_passed,
         "total": len(results),
         "pass_rate": round(overall_passed / len(results), 3),
+        "mean_recall_at_k": round(overall_recall, 3),
+        "mean_mrr": round(overall_mrr, 3),
     }
     return summary
 
@@ -131,13 +142,17 @@ def save_results(config: dict, results: list[dict], summary: dict) -> Path:
 
         
 def print_summary(summary: dict) -> None:
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 70)
     print("EVAL SUMMARY")
-    print("=" * 50)
+    print("=" * 70)
+    print(f"  {'category':<14} {'pass':>8}  {'recall@k':>10}  {'MRR':>8}")
+    print("  " + "-" * 70)
     for cat, counts in summary.items():
-        bar = "█" * counts["passed"] + "░" * (counts["total"] - counts["passed"])
-        print(f"  {cat:<16} {bar}  {counts['passed']}/{counts['total']}  ({counts['pass_rate']:.0%})")
-    print("=" * 50)
+        rate_str = f"{counts['passed']}/{counts['total']}"
+        pct_str = f"({counts['pass_rate']:.0%})"
+        print(f"  {cat:<14} {rate_str:>5} {pct_str:>5}  "
+              f"{counts['mean_recall_at_k']:>10.3f}  {counts['mean_mrr']:>8.3f}")
+    print("=" * 70)
 
 
 if __name__ == "__main__":
