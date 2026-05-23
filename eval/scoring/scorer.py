@@ -12,6 +12,12 @@ def score_question(question:dict, retrieved: list[dict]) -> dict:
       - mhc_hits: gold MHC chunks found
       - total_gold: len(gold_verses) + len(gold_commentary_chunks)
       - missed_gold: gold labels not found in retrieved
+
+    Translation dedup is implicit since we iterate over gold (not the retrieved), 
+    thus the same gold verse can only be counted once.
+
+    For "interpretive" category, 'passed' is calculated based on mhc_hits alone.
+    Verse hits are recorded in hits and contribute to recall_at_k (broader coverage signal preserved)
     """
 
     gold_verses = question.get("gold_verses",[])
@@ -35,7 +41,22 @@ def score_question(question:dict, retrieved: list[dict]) -> dict:
             missed.append(gold)
 
     hits = verse_hits + mhc_hits
-    
+    total_gold = len(gold_verses) + len(gold_commentary)
+
+    #find the 1st retrieved chunk that mathces any gold (for MRR)
+    #Iterating in retrival order (rank 1, 2,...)
+    first_hit_rank = None
+    for rank, chunk in enumerate(retrieved, start=1):
+        matched = (
+            any(verse_match(g, chunk) for g in gold_verses)
+            or any(mhc_match(g, chunk) for g in gold_commentary)
+        )
+        if matched:
+            first_hit_rank = rank
+            break
+    reciprocal_rank = 1.0 / first_hit_rank if first_hit_rank else 0.0
+    recall_at_k = hits / total_gold if total_gold else 0.0
+        
     if category == "interpretive":
         passed = mhc_hits >=min_recall
     else:
@@ -46,6 +67,9 @@ def score_question(question:dict, retrieved: list[dict]) -> dict:
         "hits": hits,
         "verse_hits": verse_hits,
         "mhc_hits": mhc_hits,
-        "total_gold": len(gold_verses) + len(gold_commentary),
+        "total_gold": total_gold,
         "missed_gold": missed,
+        "recall_at_k": recall_at_k,
+        "reciprocal_rank": reciprocal_rank,
+        "first_hit_rank": first_hit_rank,
     }
