@@ -36,6 +36,9 @@ from src.retriever import (
 )
 from eval.scoring.scorer import score_question
 
+from src.bm25_retriever import load_bm25_index, bm25_index_exists
+from src.hybrid import hybrid_search
+
 QUESTIONS_PATH = Path(__file__).parent.parent / "questions.jsonl"
 RESULTS_DIR = Path(__file__).parent.parent / "results"
 
@@ -58,6 +61,15 @@ def run_eval(config:dict) -> list[dict]:
     print("Loading cross-references...")
     xrefs = load_cross_references()
     ref_to_chunk = build_ref_to_chunk_index(chunks_meta)
+    bm25 = None
+    if config.get("use_hybrid", False):
+        if not bm25_index_exists():
+            raise RuntimeError(
+                "use_hybrid=True but no BM25 index found"
+                "Run python build_index.py to build it"
+            )
+    print("Loading BM25 index...")
+    bm25 = load_bm25_index()
     print("Loading questions...")
     questions = load_questions()
     print(f"  {len(questions)} questions loaded (excluded filtered out)")
@@ -65,7 +77,17 @@ def run_eval(config:dict) -> list[dict]:
     results = []
     for i,q in enumerate(questions,1):
         q_emb = embed_texts(embed_model, [q["question"]], show_progress=False)
-        retrieved = search(index, chunks_meta, q_emb, top_k = config["top_k"])
+        if config.get("use_hybrid", False):
+            retrieved = hybrid_search(
+                index, chunks_meta, bm25,
+                query = q["question"],
+                query_embedding = q_emb,
+                top_k=config["top_k"],
+                rrf_k=config.get("rrf_k", 60),
+                fetch_multiplier=config.get("fetch_multiplier", 3),
+            )
+        else:
+            retrieved = search(index, chunks_meta, q_emb, top_k = config["top_k"])
         if config["use_xrefs"]:
             retrieved = expand_with_cross_references(
                 retrieved, index, chunks_meta, xrefs, ref_to_chunk,
@@ -157,12 +179,15 @@ def print_summary(summary: dict) -> None:
 
 if __name__ == "__main__":
     config = {
-        "top_k": 20,
+        "top_k": 10,
         "use_xrefs": True,
         "max_extra": 3,
         "max_per_seed": 1,
         "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-        "use_commentary": False,
+        "use_commentary": True,
+        "use_hybrid": True,
+        "rrf_k": 60,
+        "fetch_multiplier": 3,
     }
 
     results = run_eval(config)
