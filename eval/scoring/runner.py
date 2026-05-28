@@ -39,7 +39,6 @@ from eval.scoring.scorer import score_question
 from src.bm25_retriever import load_bm25_index, bm25_index_exists
 from src.hybrid import hybrid_search
 
-from src.embedder import embed_query
 
 QUESTIONS_PATH = Path(__file__).parent.parent / "questions.jsonl"
 RESULTS_DIR = Path(__file__).parent.parent / "results"
