@@ -18,6 +18,7 @@ strongest configuration (dense k=30 with aggressive xref expansion).
 | 8 | Hybrid k=10, α=.5, mult=10 | 3/10 / 0.183 / 0.084 | 4/9 / 0.202 / 0.260 | 0/8 / 0.069 / 0.049 | 1/10 / 0.069 / 0.224 | 4/5 / 0.347 / 0.767 | 12/42 / 0.158 / 0.230 |
 | 9 | Hybrid k=10, α=.75, mult=3 | 4/10 / 0.317 / 0.150 | 4/9 / 0.239 / 0.269 | 0/8 / 0.090 / 0.109 | 1/10 / 0.099 / 0.228 | 4/5 / 0.347 / 0.767 | 13/42 / 0.209 / 0.260 |
 | 10 | Hybrid k=20, α=.5, mult=3 | 5/10 / 0.350 / 0.121 | 6/9 / 0.478 / 0.285 | 0/8 / 0.111 / 0.067 | 1/10 / 0.099 / 0.250 | 4/5 / 0.466 / 0.767 | 16/42 / 0.286 / 0.253 |
+| 11 | Dense k=30, xref 10/15, BGE-base | 8/10 / 0.475 / 0.308 | 8/9 / 0.626 / 0.529 | 0/8 / 0.097 / 0.312 | 2/10 / 0.098 / 0.129 | 4/5 / 0.394 / 0.670 | 22/42 / 0.336 / 0.357 |
 
 ## What each row tested
 
@@ -26,13 +27,14 @@ strongest configuration (dense k=30 with aggressive xref expansion).
 | 1 | First runnable baseline. Top_k=10, xrefs with conservative caps, MHC on, dense only. |
 | 2 | Effect of wider retrieval (top_k=20). |
 | 3 | Effect of disabling commentary. Tests whether MHC is competing with verse gold. |
-| 4 | Effect of disabling cross-reference expansion entirely (MHC on) |
+| 4 | Effect of disabling cross-reference expansion entirely (MHC on). |
 | 5 | Effect of aggressive xref at k=20 (max_per_seed=3, max_extra=10). |
 | 6 | Effect of going further on both k and xref. **The production config.** |
 | 7 | Hybrid retrieval at k=10, equal-weight RRF, default fetch. |
 | 8 | Hybrid k=10, same weights, wider fetch window (mult=10). |
 | 9 | Hybrid k=10, downweighted BM25 (dense weight 0.75). |
 | 10 | Hybrid at k=20 to match dense at matched retrieval depth. |
+| 11 | Same as row 6 but with BGE-base embeddings (110M params, retrieval-trained). Higher pass-rate, worse balanced recall. |
 
 ## Key comparisons
 
@@ -67,6 +69,15 @@ positive: named entity rises from 5/9 to 6/9 under hybrid.
 recovers slightly but doesn't reach dense baseline. Monotonic
 pattern: more BM25 influence, worse overall.
 
+**Embedding model swap (rows 6, 11):** Pass-rate +1 (21/42 -> 22/42),
+mean recall -12% (0.381 -> 0.336), MRR essentially flat. BGE-base's
+retrieval-specific training sharpens single-gold matching (named
+entity recall +24%, +2 pass) at the cost of broader multi-gold
+coverage (thematic recall -57%, narrative -35%). Headline up, but
+the win is concentrated in the strong categories at the
+expense of weak ones. MiniLM kept as production for balanced
+retrieval.
+
 ## Sources
 
 Results files in `eval/results/`:
@@ -80,6 +91,7 @@ Results files in `eval/results/`:
 - Row 8: `run_20260526_173047.json`
 - Row 9: `run_20260526_173108.json`
 - Row 10: `rrun_20260526_173130.json`
+- Row 11: `run_20260528_134348.json`
 
 
 Each results file contains the full config dict and per-question

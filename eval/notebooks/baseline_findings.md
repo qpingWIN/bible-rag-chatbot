@@ -1,6 +1,6 @@
 # Baseline findings
 
-What the eval revealed across ten retrieval configurations.
+What the eval revealed across eleven retrieval configurations.
 
 ## Setup
 
@@ -10,20 +10,27 @@ to the category (factual=1, narrative=2-5, thematic=2-4, etc).
 
 ## Ablation dimensions
 
-Three independent dimensions tested:
+Four independent dimensions tested:
 
 1. **Retrieval depth**: top_k=10 vs top_k=20 vs top_k=30
 2. **Cross-reference expansion**: none vs conservative vs aggressive
 3. **Hybrid retrieval**: pure dense vs dense + BM25 fused via RRF
+4. **Embedding model**: MiniLM (general semantic) vs BGE (retrieval-trained)
 
 Plus one ablation on commentary inclusion (use_commentary on/off)
-to verify the interpretive scoring rule (MHC chunks only).
+to verify the Option B' interpretive scoring rule.
 
 ## Headline result
 
-The strongest configuration is dense retrieval at top_k=30 with
-aggressive cross-reference expansion (max_per_seed=10, max_extra=15).
-**21/42 questions pass (50%), mean Recall@k=0.381, mean MRR=0.353.**
+The production configuration is dense retrieval at top_k=30 with
+aggressive cross-reference expansion (max_per_seed=10, max_extra=15)
+using the `all-MiniLM-L6-v2` embedding model. **21/42 questions
+pass (50%), mean Recall@k=0.381, mean MRR=0.353.**
+
+A stronger embedding model (BGE-base) was tested and produced 22/42
+pass-rate but with materially worse recall on multi-gold categories.
+The MiniLM config was chosen as production for better balanced
+retrieval. See Finding 7 below.
 
 ## Full results
 
@@ -74,8 +81,9 @@ result set. That points at xref expansion.
 
 ## Finding 3: Interpretive scoring works as designed
 
-Interpretive scored against MHC chunks only is working. With MHC enabled: 4/5 passes. 
-Strip MHC: 0/5. Confirms the category requires commentary retrieval to pass and that the
+The Option B' rule (interpretive scored against MHC chunks only)
+is working. With MHC enabled: 4/5 passes. Strip MHC: 0/5. Confirms
+the category requires commentary retrieval to pass, and that the
 dense retriever is finding the right MHC chapter consistently when
 it's available.
 
@@ -117,7 +125,7 @@ xref (max_per_seed=10, max_extra=15). The result:
 | Dense k=20 baseline | 0.291 | 0.351 | 19/42 |
 | Dense k=30 + xref 10/15 | **0.381** | 0.353 | **21/42** |
 
-Recall jumped +0.090 (+31% relative). Pass-rate went up by 2. MRR grew marginally. The
+Recall jumped +0.090 (+31% relative). Pass-rate went up by 2. The
 gains aren't concentrated in one category, they spread across all
 five.
 
@@ -230,6 +238,100 @@ is kept (`src/bm25_retriever.py`, `src/hybrid.py`, configurable
 from runner) so the experiment is reproducible. The production
 system uses dense-only retrieval.
 
+## Finding 7: A stronger embedding model traded categories rather than lifting all of them
+
+After settling on the dense k=30 + aggressive xref config, I tested
+one more intervention: swap the embedding model from
+`sentence-transformers/all-MiniLM-L6-v2` (23M params, 384-dim,
+general semantic similarity) to `BAAI/bge-base-en-v1.5` (110M params,
+768-dim, retrieval-trained). BGE was applied with its recommended
+instruction prefix
+(`"Represent this sentence for searching relevant passages: "`)
+prepended to query text but not to documents.
+
+### Results
+
+Same config (k=30, max_per_seed=10, max_extra=15), only the
+embedding model changed:
+
+| Category | MiniLM (prev best) | BGE-base | Pass Δ | Recall Δ |
+|---|---|---|---|---|
+| Factual | 8/10 (0.542 / 0.294) | 8/10 (0.475 / 0.308) | flat | -12% |
+| Named entity | 6/9 (0.506 / 0.458) | **8/9 (0.626 / 0.529)** | **+2** | **+24%** |
+| Narrative | 1/8 (0.150 / 0.307) | 0/8 (0.097 / 0.312) | -1 | -35% |
+| Thematic | 2/10 (0.225 / 0.228) | 2/10 (0.098 / 0.129) | flat | -57% |
+| Interpretive | 4/5 (0.517 / 0.607) | 4/5 (0.394 / 0.670) | flat | -24% |
+| **Overall** | **21/42 (0.381 / 0.353)** | 22/42 (0.336 / 0.357) | **+1** | **-12%** |
+
+Pass-rate up by one question. Mean recall down 12%. MRR essentially
+flat. The headline number improved, but it masked a real tradeoff.
+
+### Why pass-rate and recall moved in opposite directions
+
+This is the unusual signal worth investigating. Normally pass-rate
+and recall move together because they're correlated metrics. They
+diverged here because BGE concentrated its quality differently than
+MiniLM did.
+
+Named entity recall lifted dramatically (+24%). Single-gold questions
+became more likely to pass because BGE's retrieval-specific training
+sharpened the embedding distance between queries and their best
+matching documents.
+
+Thematic recall collapsed (-57%). BGE's sharper embeddings push
+tangentially-related content further from the query in embedding
+space. For thematic questions where you want multiple related but
+distinct verses (e.g. "What does the Bible say about forgiveness?"
+has gold scattered across Matthew, Ephesians, Colossians, 1 John),
+the additional 2nd, 3rd, 4th gold verses are getting pushed out of
+top-k that they previously made.
+
+MRR being flat (0.353 -> 0.357) confirms first-hit rank didn't
+materially change. The system finds approximately the same first
+gold verse at approximately the same depth. The difference is what
+happens after the first hit.
+
+### Why BGE behaves this way
+
+BGE was trained with a contrastive retrieval objective: maximise
+similarity between queries and their best documents, minimise
+similarity between queries and irrelevant documents. The "minimise"
+side of the loss pushes the long tail of "kind of relevant" content
+further from the query than general-purpose models like MiniLM do.
+
+For factual / named entity tasks where you want the single best
+match, this is exactly the right behaviour. For thematic retrieval
+where breadth matters more than precision, it's the wrong
+behaviour.
+
+This is a known property of retrieval-trained embeddings, not a
+defect specific to BGE.
+
+### Decision: keep MiniLM as production
+
+22/42 vs 21/42 is a one-question improvement on pass-rate. The
+recall regression on thematic (-57%) and narrative (-35%) is
+substantially larger in magnitude. For a Bible QA system where
+both single-best-answer and broad-topic-coverage matter, MiniLM
+gives better balanced retrieval.
+
+The BGE configuration is preserved (`src/embedder.py` has both
+models, swap via the `MODEL_NAME` constant) so the result is
+reproducible.
+
+### What this rules out
+
+Embedding model capacity is not the bottleneck on multi-gold
+categories. The +5x parameter count and the retrieval-specific
+training in BGE produced worse coverage on those categories.
+Future work targeting multi-gold improvement should look at:
+
+- Chunk-level changes (longer or overlapping chunks so each gold
+  has more lexical surface area)
+- Query rewriting (expand short questions before retrieval)
+- A cross-encoder reranker on top of dense top-50, which could
+  exploit BGE's precision without losing MiniLM's breadth
+
 ## Production configuration
 
 ```python
@@ -251,12 +353,10 @@ Pass-rate 21/42 (50%), mean Recall@k 0.381, mean MRR 0.353.
 Things that might lift the multi-gold categories further but were
 out of scope:
 
-- A stronger embedding model (BGE, MPNet) with better short-text
-  similarity. Could improve narrative/thematic where dense currently
-  ranks gold at rank 4-8 instead of 1-3.
 - Chunk-level changes (longer chunks, sliding-window overlap)
 - Query rewriting (expand short questions into verse-style phrasing
   before retrieval)
-- A cross-encoder reranker on top of dense top-50
+- A cross-encoder reranker on top of dense top-50 that could combine
+  BGE's precision with MiniLM-like breadth
 
 These would be the next experiments with more time.

@@ -246,3 +246,78 @@ But for this specific corpus and these specific questions, the
 interaction is real. The lesson generalises better than the
 specific numbers: when a parameter has multiple tuning knobs, the
 interaction matrix matters more than any single axis.
+
+## Story 6: A "stronger" embedding model was worse for the use case
+
+After the production config landed at 21/42 with MiniLM, the
+obvious next experiment was swapping in a stronger embedding
+model. I picked `BAAI/bge-base-en-v1.5`: 110M params (vs MiniLM's
+23M), 768-dim (vs 384), trained specifically for retrieval rather
+than general semantic similarity. Applied with BGE's recommended
+instruction prefix for the queries.
+
+Same config (k=30, aggressive xref), only the model changed. The
+rebuild took 10 minutes. Then the eval.
+
+Headline number: 22/42 (52%). Up by one question. A small win.
+
+I almost stopped there and called it the new production config.
+Then I looked at the per-category breakdown.
+
+| Category | MiniLM | BGE-base | Recall change |
+|---|---|---|---|
+| Factual | 8/10 | 8/10 | -12% |
+| Named entity | 6/9 | **8/9** | **+24%** |
+| Narrative | 1/8 | 0/8 | -35% |
+| Thematic | 2/10 | 2/10 | **-57%** |
+| Interpretive | 4/5 | 4/5 | -24% |
+
+Pass-rate up by one. Mean recall down 12%. And the per-category
+pattern was striking: named entity jumped 24% in recall and gained
+2 pass-rate, but thematic recall collapsed by 57% and narrative
+dropped its only passing question.
+
+This shouldn't happen with a normal model upgrade. Pass-rate and
+recall should move together. They diverged because BGE was
+concentrating its quality differently than MiniLM.
+
+The mechanism became clear once I thought about how BGE was trained.
+Contrastive retrieval loss: maximise similarity between queries and
+their best documents, minimise similarity between queries and
+irrelevant documents. The "minimise" side pushes the long tail of
+"kind of relevant" content further from the query than models generally do.
+
+For named entity questions ("Who was the disciple Jesus loved?"),
+this sharpening is exactly right. The best-match document is the
+one that mentions the named entity directly, and BGE finds it more
+reliably than MiniLM.
+
+For thematic questions ("What does the Bible say about
+forgiveness?"), the gold is scattered across the canon (Matthew,
+Ephesians, Colossians, 1 John, Mark, etc). Each gold verse is
+"kind of relevant" to the question rather than "exactly the
+answer." BGE pushes these tangentially related verses away from
+the query in embedding space, so the 2nd, 3rd, 4th gold verses
+that previously made top-30 with MiniLM no longer make it.
+
+MRR being essentially flat (0.353 -> 0.357) confirmed this. First-
+hit rank wasn't the lever. The difference was entirely in what
+came after the first hit.
+
+I made the call to keep MiniLM as production. One pass-rate
+question gained on named entity didn't compensate for the recall
+regression on thematic and narrative. For a Bible QA system where
+both precision and breadth matter, MiniLM gave better balanced
+retrieval.
+
+What I took from this: "stronger model" is corpus dependent and
+task dependent. The training objective matters as much as parameter
+count. A retrieval-trained model trades breadth for precision, which
+is the right tradeoff for some use cases (commercial product
+search, where you want the single best match) and the wrong tradeoff
+for others (thematic Bible search, where you want broad coverage).
+
+Headline numbers can mislead. If I'd looked only at pass-rate and
+not at recall, I would have shipped the worse production config.
+The continuous metrics were what made the tradeoff visible.
+
