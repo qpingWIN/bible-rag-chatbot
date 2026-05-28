@@ -78,8 +78,7 @@ def run_eval(config:dict) -> list[dict]:
 
     results = []
     for i,q in enumerate(questions,1):
-        #q_emb = embed_texts(embed_model, [q["question"]], show_progress=False)
-        q_emb = embed_query(embed_model, q["question"])
+        q_emb = embed_texts(embed_model, [q["question"]], show_progress=False)
         if config.get("use_hybrid", False):
             retrieved = hybrid_search(
                 index, chunks_meta, bm25,
