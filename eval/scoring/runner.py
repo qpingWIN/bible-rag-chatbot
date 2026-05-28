@@ -39,6 +39,8 @@ from eval.scoring.scorer import score_question
 from src.bm25_retriever import load_bm25_index, bm25_index_exists
 from src.hybrid import hybrid_search
 
+from src.embedder import embed_query
+
 QUESTIONS_PATH = Path(__file__).parent.parent / "questions.jsonl"
 RESULTS_DIR = Path(__file__).parent.parent / "results"
 
@@ -76,7 +78,8 @@ def run_eval(config:dict) -> list[dict]:
 
     results = []
     for i,q in enumerate(questions,1):
-        q_emb = embed_texts(embed_model, [q["question"]], show_progress=False)
+        #q_emb = embed_texts(embed_model, [q["question"]], show_progress=False)
+        q_emb = embed_query(embed_model, q["question"])
         if config.get("use_hybrid", False):
             retrieved = hybrid_search(
                 index, chunks_meta, bm25,
@@ -85,6 +88,7 @@ def run_eval(config:dict) -> list[dict]:
                 top_k=config["top_k"],
                 rrf_k=config.get("rrf_k", 60),
                 fetch_multiplier=config.get("fetch_multiplier", 3),
+                dense_weight=config.get("dense_weight", 0.75),
             )
         else:
             retrieved = search(index, chunks_meta, q_emb, top_k = config["top_k"])
@@ -179,15 +183,16 @@ def print_summary(summary: dict) -> None:
 
 if __name__ == "__main__":
     config = {
-        "top_k": 10,
+        "top_k": 30,
         "use_xrefs": True,
-        "max_extra": 3,
-        "max_per_seed": 1,
-        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+        "max_extra": 15,
+        "max_per_seed": 10,
+        "embedding_model": "BAAI/bge-base-en-v1.5",
         "use_commentary": True,
-        "use_hybrid": True,
+        "use_hybrid": False,
         "rrf_k": 60,
         "fetch_multiplier": 3,
+        "dense_weight": 0.5
     }
 
     results = run_eval(config)
