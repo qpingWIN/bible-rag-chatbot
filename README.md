@@ -34,7 +34,7 @@ retrieval quality across a hand-labelled gold set. See the
 
 ## Features
 
-- Semantic search across ~96k indexed chunks
+- Semantic search across ~95k indexed chunks
 - Two translations (KJV + BSB) with reference-key deduplication
 - Matthew Henry's Complete Commentary chunked with a sliding 250-word window
 - Cross-reference graph expansion over 344k verse-pair links

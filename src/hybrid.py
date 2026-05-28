@@ -14,6 +14,7 @@ def reciprocal_rank_fusion(
     bm25_results: list[dict],
     top_k: int = 10,
     rrf_k: int = 60,
+    dense_weight: float = 0.75,
 ) -> list[dict]:
     """Fuse two ranked result lists with reciprocal rank fusion (RRF).
 
@@ -64,9 +65,9 @@ def reciprocal_rank_fusion(
     for entry in entries.values():
         score = 0.0
         if entry["dense_rank"] is not None:
-            score += 1.0 / (rrf_k + entry["dense_rank"])
+            score += dense_weight / (rrf_k + entry["dense_rank"])
         if entry["bm25_rank"] is not None:
-            score += 1.0 / (rrf_k + entry["bm25_rank"])
+            score += (1.0 - dense_weight) / (rrf_k + entry["bm25_rank"])
 
         chunk = dict(entry["chunk"]) 
         chunk["rrf_score"] = score
@@ -87,6 +88,7 @@ def hybrid_search(
     top_k: int = 10,
     rrf_k: int = 60,
     fetch_multiplier: int = 3,
+    dense_weight: float = 0.75,
 ) -> list[dict]:
     """Runs dense and BM25 retrieval, fuses with RRF, returns top_k
 
@@ -104,4 +106,5 @@ def hybrid_search(
         bm25_results=bm25_results,
         top_k=top_k,
         rrf_k=rrf_k,
+        dense_weight=dense_weight
     )

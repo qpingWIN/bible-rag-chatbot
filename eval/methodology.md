@@ -67,9 +67,9 @@ For verse categories, deduplication is applied before scoring: if a retriever re
 
 Several pipeline parameters are exposed to the eval rather than fixed at production defaults, because their optimal values are empirical questions the eval is designed to answer. These are not assumptions baked into the methodology but variables swept during the ablation:
 
-- **Chunker** — `max_words`, `overlap_sentences` on the MHC sliding sentence-window chunker.
+- **Chunker** - `max_words`, `overlap_sentences` on the MHC sliding sentence-window chunker.
 - **Cross-reference expansion** — `max_extra` (global cap on xref additions per query) and `max_per_seed` (per-seed contribution cap, so a single high-ranked seed cannot exhaust the xref budget on its own).
-- **Retrieval `top_k`** — number of chunks retrieved before xref expansion.
+- **Retrieval `top_k`** - number of chunks retrieved before xref expansion.
 
 Production defaults exist (`max_words=250`, `overlap_sentences=1`, `max_extra=3`, `max_per_seed=1`) but are starting points for the sweep, not fixed assumptions. The methodology commits to *how* these are evaluated (per-category metrics, bootstrap CIs, paired comparisons) and is agnostic to the specific values chosen.
 
