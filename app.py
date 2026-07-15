@@ -192,4 +192,5 @@ with gr.Blocks(title="Bible RAG") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(server_port=7862, share=False, theme=gr.themes.Soft())
+    # Gradio 6 API: theme is a launch() parameter (moved out of gr.Blocks in 6.0)
+    demo.launch(server_port=7860, share=False, theme=gr.themes.Soft())
