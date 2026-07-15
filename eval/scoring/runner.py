@@ -185,7 +185,7 @@ if __name__ == "__main__":
         "use_xrefs": True,
         "max_extra": 15,
         "max_per_seed": 10,
-        "embedding_model": "BAAI/bge-base-en-v1.5",
+        "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
         "use_commentary": True,
         "use_hybrid": False,
         "rrf_k": 60,
