@@ -57,6 +57,13 @@ except Exception as e:
     print(f"WARNING: Could not connect to Ollama: {e}")
     print("Make sure Ollama is running: ollama serve")
 
+# Production retrieval config — winner of the 10-config eval ablation
+# (see README, Evaluation section). top_k and xref aggressiveness interact:
+# expansion only surfaces genuinely new verses with enough seed chunks.
+PROD_TOP_K = 30
+PROD_MAX_EXTRA = 15
+PROD_MAX_PER_SEED = 10
+
 # Core query function
 
 def answer_question(
@@ -97,7 +104,8 @@ def answer_question(
     # 5. Cross-reference expansion
     if use_xrefs:
         results = expand_with_cross_references(
-            results, index, chunks_meta, xrefs, ref_to_chunk, max_extra=3
+            results, index, chunks_meta, xrefs, ref_to_chunk,
+            max_extra=PROD_MAX_EXTRA, max_per_seed=PROD_MAX_PER_SEED,
         )
 
     # 6. Generate answer
@@ -142,7 +150,7 @@ with gr.Blocks(title="Bible RAG") as demo:
     with gr.Accordion("Search settings", open=False):
         with gr.Row():
             top_k = gr.Slider(
-                minimum=3, maximum=15, value=6, step=1,
+                minimum=3, maximum=PROD_TOP_K, value=PROD_TOP_K, step=1,
                 label="Passages to retrieve (K)",
                 info="More passages = more context but longer prompts",
             )
