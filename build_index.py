@@ -3,7 +3,8 @@ One-time script: loading all data, then chunking, followed by embedding and savi
 
 Run this before using the chatbot: python build_index.py
 
-Takes ~2-5 minutes on first run (downloads embedding model, processes ~65k chunks).
+Takes ~2-5 minutes on first run (downloads embedding model, processes ~95k chunks:
+31,102 KJV verses + 31,102 BSB verses + 32,444 MHC commentary windows).
 Subsequent runs load from cache in <5 seconds.
 
 WHAT THIS SCRIPT DOES (step by step)
@@ -13,7 +14,7 @@ WHAT THIS SCRIPT DOES (step by step)
 3. Embed: run every chunk through all-MiniLM-L6-v2 to get the float32 matrix (N, 384)
 4. Build FAISS index: store the matrix in an IndexFlatIP for fast dot-product search
 5. Build BM25 index using rank_bm25
-5. Save: write indexes + chunk metadata to data/index/ so the app loads instantly
+6. Save: write indexes + chunk metadata to data/index/ so the app loads instantly
 """
 
 import sys
