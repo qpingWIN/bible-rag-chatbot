@@ -1,5 +1,9 @@
 # Bible RAG Chatbot
 
+[![tests](https://github.com/qpingWIN/bible-rag-chatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/qpingWIN/bible-rag-chatbot/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A locally-hosted retrieval-augmented question-answering system over a
 ~95k-chunk heterogeneous corpus: two Bible translations (KJV, BSB),
 Matthew Henry's 18th-century commentary (1,189 chapters), and a
@@ -63,9 +67,12 @@ Bootstrap 95% CI on the headline pass-rate: **[0.36, 0.64]** over
 alongside the point estimates (`python -m eval.scoring.bootstrap`
 reproduces this for any saved run).
 
-Ten total configurations were tested across three intervention
-dimensions to characterise the system's ceiling and rule out
-interventions that didn't work.
+Eleven total configurations were tested across four intervention
+dimensions (retrieval depth, cross-reference aggressiveness, hybrid
+BM25 fusion, embedding model) to characterise the system's ceiling
+and rule out interventions that didn't work.
+
+![Ablation overview: pass-rate and mean recall across all 11 configurations](docs/plots/ablation_overview.png)
 
 ### The gold set
 
