@@ -40,7 +40,7 @@ def load_kjv() -> list[Document]:
 
 
 def load_bsb() -> list[Document]:
-    data = json.loads((RAW / "web.json").read_text())
+    data = json.loads((RAW / "bsb.json").read_text())
     docs = []
     for book in data["books"]:
         for chapter in book["chapters"]:

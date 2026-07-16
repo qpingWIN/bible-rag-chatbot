@@ -363,7 +363,7 @@ Download and place in `data/raw/`:
 | File                   | Source                                                                                                             |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `kjv.json`             | [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases/blob/master/formats/json/KJV.json) |
-| `web.json`             | [Berean Standard Bible](https://berean.bible)                                                                      |
+| `bsb.json`             | [Berean Standard Bible](https://berean.bible)                                                                      |
 | `mhc_commentary.json`  | Extract via `data/extract_mhc.py` from the SWORD MHC module                                                        |
 | `cross_references.txt` | [OpenBible.info](https://www.openbible.info/labs/cross-references/)                                                |
 
