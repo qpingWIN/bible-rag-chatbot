@@ -57,6 +57,12 @@ mean Recall@k 0.381 and mean MRR 0.353. Dense retrieval at top_k=30
 with aggressive cross-reference expansion (max_per_seed=10,
 max_extra=15).
 
+Bootstrap 95% CI on the headline pass-rate: **[0.36, 0.64]** over
+10,000 resamples of the question set. With n=42 the honest claim is
+"between a third and two-thirds", which is why CIs are reported
+alongside the point estimates (`python -m eval.scoring.bootstrap`
+reproduces this for any saved run).
+
 Ten total configurations were tested across three intervention
 dimensions to characterise the system's ceiling and rule out
 interventions that didn't work.
@@ -140,6 +146,9 @@ python -m eval.scoring.runner
 
 # Run the test suite
 pytest -v
+
+# Bootstrap 95% CIs for the latest (or any) saved run
+python -m eval.scoring.bootstrap
 ```
 
 The config dict at the bottom of `eval/scoring/runner.py` controls
@@ -166,8 +175,10 @@ config = {
 - Try query rewriting (expand short questions into verse-style
   phrasing before retrieval)
 - Add a cross-encoder reranker on top of dense top-50
-- Bootstrap confidence intervals on the per-category pass-rates
 - Chunk-level changes (longer chunks, sliding-window overlap)
+- Grow the gold set, narrative and thematic especially as the
+  bootstrap CIs show n=8-10 per category is too few to measure
+  category-level skill precisely
 
 ---
 
