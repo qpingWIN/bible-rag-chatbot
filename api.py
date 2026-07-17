@@ -27,13 +27,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 # Production retrieval config - winner of the 11-config ablation study.
-PRODUCTION_CONFIG = {
-    "top_k": 30,
-    "use_xrefs": True,
-    "max_extra": 15,
-    "max_per_seed": 10,
-    "use_commentary": True,
-}
+# Defined once in src/pipeline.py, shared with the Gradio app.
+from src.pipeline import PRODUCTION_CONFIG, get_pipeline
 
 
 @asynccontextmanager
@@ -45,44 +40,11 @@ async def lifespan(app: FastAPI):
     (API_TEST_MODE=1) where those dependencies or the index are absent.
     """
     if os.environ.get("API_TEST_MODE") != "1":
-        from src.embedder import load_model, embed_texts
-        from src.generator import generate
-        from src.ingest import load_cross_references
-        from src.retriever import (
-            build_ref_to_chunk_index,
-            expand_with_cross_references,
-            index_exists,
-            load_index,
-            search,
-        )
-
-        if not index_exists():
-            raise RuntimeError(
-                "Index not found. Run `python build_index.py` first."
-            )
-
-        index, chunks_meta = load_index()
-        model = load_model()
-        xrefs = load_cross_references()
-        ref_to_chunk = build_ref_to_chunk_index(chunks_meta)
-
-        # The endpoints only ever touch these callables, which makes the
-        # pipeline trivially fake-able in tests.
-        app.state.rag = SimpleNamespace(
-            index_size=index.ntotal,
-            embed=lambda texts: embed_texts(model, texts, show_progress=False),
-            search=lambda emb, k: search(index, chunks_meta, emb, top_k=k),
-            expand=lambda results: expand_with_cross_references(
-                results,
-                index,
-                chunks_meta,
-                xrefs,
-                ref_to_chunk,
-                max_extra=PRODUCTION_CONFIG["max_extra"],
-                max_per_seed=PRODUCTION_CONFIG["max_per_seed"],
-            ),
-            generate=lambda query, results: generate(query, results, stream=False),
-        )
+        # get_pipeline() is lru_cached: if the Gradio app (mounted below)
+        # already loaded it, this returns the same objects instantly.
+        # The endpoints only ever touch the pipeline's four callables,
+        # which makes it trivially fake-able in tests.
+        app.state.rag = get_pipeline()
     yield
 
 
@@ -207,16 +169,29 @@ def ask(req: AskRequest):
         raise HTTPException(status_code=404, detail="No passages matched the query.")
     try:
         answer = rag.generate(req.question, results)
-    except Exception as e:  # Ollama down / model missing
+    except Exception as e:  # generation backend down (Ollama or Groq)
         raise HTTPException(
             status_code=503,
-            detail=f"Generation backend unavailable: {e}. Is Ollama running?",
+            detail=f"Generation backend unavailable: {e}",
         ) from e
     return AskResponse(
         question=req.question,
         passages=_to_passages(results),
         answer=answer,
     )
+
+
+# ---------------------------------------------------------------------------
+# Gradio UI mounted at "/" — one process serves both the demo and the API.
+# Skipped in tests: importing app would load the full pipeline.
+# ---------------------------------------------------------------------------
+
+if os.environ.get("API_TEST_MODE") != "1":
+    import gradio as gr
+
+    from app import demo
+
+    app = gr.mount_gradio_app(app, demo, path="/")
 
 
 if __name__ == "__main__":

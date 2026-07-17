@@ -22,47 +22,29 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import os
+
 import gradio as gr
-from src.ingest import load_cross_references
-from src.embedder import load_model, embed_texts
-from src.retriever import (
-    load_index,
-    index_exists,
-    search,
-    expand_with_cross_references,
-    build_ref_to_chunk_index,
-)
-from src.generator import generate, list_available_models
+from src.generator import list_available_models
+from src.pipeline import PRODUCTION_CONFIG, get_pipeline
 
-import numpy as np
+print("Loading pipeline (index, embedding model, cross-references)...")
+rag = get_pipeline()
 
-# Starting checks
-if not index_exists():
-    print("ERROR: Index not found. Run `python build_index.py` first.")
-    sys.exit(1)
+if os.environ.get("GROQ_API_KEY"):
+    print("Generation backend: Groq API")
+else:
+    print("Generation backend: local Ollama")
+    try:
+        available = list_available_models()
+        print(f"Available models: {available}")
+    except Exception as e:
+        print(f"WARNING: Could not connect to Ollama: {e}")
+        print("Make sure Ollama is running: ollama serve")
 
-print("Loading index and embedding model...")
-index, chunks_meta = load_index()
-embed_model = load_model()
-
-print("Loading cross-references...")
-xrefs = load_cross_references()
-ref_to_chunk = build_ref_to_chunk_index(chunks_meta)
-
-print("Checking Ollama models...")
-try:
-    available = list_available_models()
-    print(f"Available models: {available}")
-except Exception as e:
-    print(f"WARNING: Could not connect to Ollama: {e}")
-    print("Make sure Ollama is running: ollama serve")
-
-# Production retrieval config — winner of the 10-config eval ablation
-# (see README, Evaluation section). top_k and xref aggressiveness interact:
-# expansion only surfaces genuinely new verses with enough seed chunks.
-PROD_TOP_K = 30
-PROD_MAX_EXTRA = 15
-PROD_MAX_PER_SEED = 10
+# Ablation-winning retrieval depth; xref params are baked into rag.expand
+# (both defined in src/pipeline.py, single source of truth).
+PROD_TOP_K = PRODUCTION_CONFIG["top_k"]
 
 # Core query function
 
@@ -82,10 +64,10 @@ def answer_question(
         return "Please enter a question.", ""
 
     # 1. Embed the query
-    q_emb = embed_texts(embed_model, [query], show_progress=False)   # shape (1, 384)
+    q_emb = rag.embed([query])   # shape (1, 384)
 
     # 2. Retrieve
-    results = search(index, chunks_meta, q_emb, top_k=top_k)
+    results = rag.search(q_emb, top_k)
 
     # 3. Filter by source if requested
     if source_filter != "All":
@@ -103,13 +85,10 @@ def answer_question(
 
     # 5. Cross-reference expansion
     if use_xrefs:
-        results = expand_with_cross_references(
-            results, index, chunks_meta, xrefs, ref_to_chunk,
-            max_extra=PROD_MAX_EXTRA, max_per_seed=PROD_MAX_PER_SEED,
-        )
+        results = rag.expand(results)
 
     # 6. Generate answer
-    answer = generate(query, results, stream=False)
+    answer = rag.generate(query, results)
 
     # 7. Build sources panel
     source_lines = []
@@ -152,7 +131,7 @@ with gr.Blocks(title="Bible RAG") as demo:
             top_k = gr.Slider(
                 minimum=3, maximum=PROD_TOP_K, value=PROD_TOP_K, step=1,
                 label="Passages to retrieve (K)",
-                info="More passages = more context but longer prompts",
+                info="Dense retrieval depth, cross-reference expansion can add up to 15 more",
             )
             source_filter = gr.Dropdown(
                 choices=["All", "KJV only", "BSB only", "Commentary only"],

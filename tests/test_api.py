@@ -110,12 +110,12 @@ def test_ask_validation_rejects_bad_top_k(client):
     assert r.status_code == 422
 
 
-def test_ask_503_when_ollama_down():
+def test_ask_503_when_generation_backend_down():
     app.state.rag = make_fake_rag(generate_error=ConnectionError("refused"))
     with TestClient(app) as c:
         r = c.post("/ask", json={"question": "What is love?"})
     assert r.status_code == 503
-    assert "Ollama" in r.json()["detail"]
+    assert "unavailable" in r.json()["detail"]
 
 
 def test_503_when_pipeline_not_loaded():

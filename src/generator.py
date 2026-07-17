@@ -1,9 +1,20 @@
-"""Response generation via Ollama (local LLM)"""
+"""Response generation: local Ollama by default, Groq API when GROQ_API_KEY is set.
 
+The prompt, grounding rules, and temperature are identical across backends -
+only the transport differs. The Groq path exists for the hosted demo (HF
+Spaces has no GPU for local inference); local runs stay fully offline.
+"""
+
+import os
+
+import httpx
 from ollama import Client
 
 OLLAMA_MODEL = "llama3.2"
 OLLAMA_HOST = "http://localhost:11434"
+
+GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_TEMPLATE = """\
 You are a biblical scholar who answers questions using ONLY the provided source passages.
@@ -37,6 +48,22 @@ def build_messages(query: str, results: list[dict]) -> list[dict]:
     ]
 
 
+def _generate_groq(messages: list[dict], temperature: float) -> str:
+    """OpenAI-compatible chat completion against Groq's hosted llama."""
+    response = httpx.post(
+        GROQ_URL,
+        headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"},
+        json={
+            "model": GROQ_MODEL,
+            "messages": messages,
+            "temperature": temperature,
+        },
+        timeout=60.0,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
+
+
 def generate(
     query: str,
     results: list[dict],
@@ -44,8 +71,12 @@ def generate(
     temperature: float = 0.0,
     stream: bool = True,
 ) -> str:
-    client = Client(host=OLLAMA_HOST)
     messages = build_messages(query, results)
+
+    if os.environ.get("GROQ_API_KEY"):
+        return _generate_groq(messages, temperature)
+
+    client = Client(host=OLLAMA_HOST)
 
     if stream:
         full_response = []
