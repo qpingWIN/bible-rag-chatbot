@@ -191,7 +191,9 @@ if os.environ.get("API_TEST_MODE") != "1":
 
     from app import demo
 
-    app = gr.mount_gradio_app(app, demo, path="/")
+    # Same theme as the standalone app.py launch — mount bypasses launch(),
+    # so theming must be applied here too
+    app = gr.mount_gradio_app(app, demo, path="/", theme=gr.themes.Soft())
 
 
 if __name__ == "__main__":
