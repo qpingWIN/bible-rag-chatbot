@@ -2,6 +2,8 @@ sentence-transformers>=2.7.0
 faiss-cpu>=1.8.0
 gradio>=6.0
 ollama>=0.2.0
+fastapi>=0.110
+uvicorn>=0.29
 numpy>=1.26.0
 
 rank-bm25>=0.2.2
