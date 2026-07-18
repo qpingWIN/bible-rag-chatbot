@@ -4,6 +4,8 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+**Live demo**: [qpingwin-bible-rag-chatbot.hf.space](https://qpingwin-bible-rag-chatbot.hf.space) — UI + interactive API docs at [/docs](https://qpingwin-bible-rag-chatbot.hf.space/docs). Hosted generation uses llama-3.3-70b via Groq; the project runs fully locally via Ollama (below).
+
 A locally-hosted retrieval-augmented question-answering system over a
 ~95k-chunk heterogeneous corpus: two Bible translations (KJV, BSB),
 Matthew Henry's 18th-century commentary (1,189 chapters), and a
