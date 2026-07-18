@@ -105,11 +105,17 @@ def answer_question(
 
 # Gradio UI
 
+_BACKEND_NOTE = (
+    "hosted demo, generation by llama-3.3-70b via the Groq API"
+    if os.environ.get("GROQ_API_KEY")
+    else "running 100% locally via Ollama"
+)
+
 with gr.Blocks(title="Bible RAG") as demo:
-    gr.Markdown("""
+    gr.Markdown(f"""
     # Bible RAG Chatbot
     Ask any question about the Bible. Answers are grounded in KJV, BSB, and
-    Matthew Henry's Complete Commentary - running 100% locally via Ollama.
+    Matthew Henry's Complete Commentary - {_BACKEND_NOTE}.
     """)
 
     with gr.Row():
