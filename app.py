@@ -106,7 +106,7 @@ def answer_question(
 # Gradio UI
 
 _BACKEND_NOTE = (
-    "hosted demo, generation by llama-3.3-70b via the Groq API"
+    "hosted demo, generation by gpt-oss-120b via the Groq API"
     if os.environ.get("GROQ_API_KEY")
     else "running 100% locally via Ollama"
 )

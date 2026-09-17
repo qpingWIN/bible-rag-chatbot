@@ -13,7 +13,7 @@ from ollama import Client
 OLLAMA_MODEL = "llama3.2"
 OLLAMA_HOST = "http://localhost:11434"
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_TEMPLATE = """\
