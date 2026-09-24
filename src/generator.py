@@ -10,10 +10,8 @@ import os
 import httpx
 from ollama import Client
 
-OLLAMA_MODEL = "llama3.2"
-OLLAMA_HOST = "http://localhost:11434"
+from src.backend import GROQ_MODEL, OLLAMA_HOST, OLLAMA_MODEL
 
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 SYSTEM_TEMPLATE = """\
@@ -49,7 +47,7 @@ def build_messages(query: str, results: list[dict]) -> list[dict]:
 
 
 def _generate_groq(messages: list[dict], temperature: float) -> str:
-    """OpenAI-compatible chat completion against Groq's hosted llama."""
+    """OpenAI-compatible chat completion against Groq's hosted model"""
     response = httpx.post(
         GROQ_URL,
         headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"},

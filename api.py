@@ -9,7 +9,7 @@ Interactive docs (auto-generated):
 Endpoints:
     GET  /health   liveness + index stats
     POST /search   retrieval only (fast, no LLM) - returns ranked passages
-    POST /ask      full RAG loop - retrieval + grounded generation via Ollama
+    POST /ask      full RAG loop - retrieval + grounded generation via Ollama/Groq
 
 Defaults are the production config found by the eval ablation study
 (see README, Evaluation section): top_k=30, aggressive xref expansion.
@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from src.backend import backend_label
 
 # Production retrieval config - winner of the 11-config ablation study.
 # Defined once in src/pipeline.py, shared with the Gradio app.
@@ -52,8 +53,8 @@ app = FastAPI(
     title="Bible RAG API",
     description=(
         "Retrieval-augmented question answering over KJV, BSB, and Matthew "
-        "Henry's Commentary. Fully local: sentence-transformers + FAISS for "
-        "retrieval, llama3.2 via Ollama for generation."
+        "Henry's Commentary. sentence-transformers + FAISS for retrieval, "
+        f"{backend_label()} for generation."
     ),
     version="1.0.0",
     lifespan=lifespan,

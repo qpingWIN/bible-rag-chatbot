@@ -12,9 +12,10 @@ THE FULL RAG LOOP (what happens when you submit a question)
    embedding vectors are closest (highest cosine similarity) to yours.
 3. [Optional]Cross-reference expansion: if matched verses have theological links, we add those too.
 4. The retrieved chunks are injected into the system prompt as context.
-5. Ollama (local llama3.2) reads the context + your question and generates a grounded answer that cites sources.
+5. The LLM reads the context + your question and generates a grounded answer that cites sources.
 
-Nothing here calls the internet. Everything runs on your machine.
+Locally this runs fully offline (llama3.2 via Ollama). The hosted demo sets
+GROQ_API_KEY and generates via the Groq API instead.
 """
 
 import sys
@@ -25,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import os
 
 import gradio as gr
+from src.backend import backend_label
 from src.generator import list_available_models
 from src.pipeline import PRODUCTION_CONFIG, get_pipeline
 
@@ -106,7 +108,7 @@ def answer_question(
 # Gradio UI
 
 _BACKEND_NOTE = (
-    "hosted demo, generation by gpt-oss-120b via the Groq API"
+          f"hosted demo, generation by {backend_label()}"
     if os.environ.get("GROQ_API_KEY")
     else "running 100% locally via Ollama"
 )
